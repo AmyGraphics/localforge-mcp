@@ -18,11 +18,11 @@
 
 | Tool | What it does |
 |------|--------------|
-| `autonomous_local_seo_dominator` | **Master 1-shot engine** — Map Pack decoder (proximity/relevance/prominence), visibility-stage diagnosis, storefront vs service-area vs appointment playbooks & the 90-day domination roadmap |
-| `engineer_google_business_profile` | Primary/secondary category strategy, services & attributes architecture, photo/Posts/Q&A engines & the suspension prevention + reinstatement playbook |
-| `build_review_reputation_engine` | **100% ethical** review generation (timing, scripts, friction-kill), reader-first response systems, rating-recovery math & competitive reputation-gap analysis — no fake reviews, no gating, ever |
-| `dominate_local_rankings` | Citation/NAP systems (aggregator-first, no 300-directory snake oil), local landing pages with schema that rank without doorway spam, the local link engine & GeoGrid rank tracking |
-| `convert_local_traffic_to_customers` | Missed-call text-back, booking ubiquity, the above-the-fold local page formula, LSA/PMax ads honesty & the measurement spine (UTM, NAP-safe call tracking, real KPIs) |
+| `local.architect` | **Master 1-shot engine** — Map Pack decoder (proximity/relevance/prominence), visibility-stage diagnosis, storefront vs service-area vs appointment playbooks & the 90-day domination roadmap |
+| `local.business_profile` | Primary/secondary category strategy, services & attributes architecture, photo/Posts/Q&A engines & the suspension prevention + reinstatement playbook |
+| `local.reviews` | **100% ethical** review generation (timing, scripts, friction-kill), reader-first response systems, rating-recovery math & competitive reputation-gap analysis — no fake reviews, no gating, ever |
+| `local.rankings` | Citation/NAP systems (aggregator-first, no 300-directory snake oil), local landing pages with schema that rank without doorway spam, the local link engine & GeoGrid rank tracking |
+| `local.conversion` | Missed-call text-back, booking ubiquity, the above-the-fold local page formula, LSA/PMax ads honesty & the measurement spine (UTM, NAP-safe call tracking, real KPIs) |
 
 ---
 
@@ -49,7 +49,7 @@ Then ask your agent things like:
 
 ---
 
-## 🔴 NEW in v1.1 — Live Tool: `audit_local_business_schema_live`
+## 🔴 NEW in v1.1 — Live Tool: `local.audit_schema_live`
 
 Fetches any business website live and audits REAL local-SEO signals: LocalBusiness JSON-LD field by field, NAP presence, tel: links, Maps embeds, and prioritized local ranking fixes.
 
