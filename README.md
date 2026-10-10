@@ -49,6 +49,12 @@ Then ask your agent things like:
 
 ---
 
+## 🔴 NEW in v1.1 — Live Tool: `audit_local_business_schema_live`
+
+Fetches any business website live and audits REAL local-SEO signals: LocalBusiness JSON-LD field by field, NAP presence, tel: links, Maps embeds, and prioritized local ranking fixes.
+
+No API key needed — works out of the box.
+
 ## 💰 Pricing
 
 **Start free — 10 requests/day, no signup, no card.**

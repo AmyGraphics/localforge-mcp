@@ -75,7 +75,7 @@ export default {
         status: 'healthy',
         service: 'localforge-mcp',
         version: '1.0.0',
-        tools_available: 5,
+        tools_available: 6,
         pricing: PRO_TIERS
       }), {
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
@@ -302,6 +302,36 @@ async function handleMcpRequest(request, env) {
               required: ['status', 'call_booking_layer', 'website_conversion', 'local_ads_layer', 'measurement_spine', 'intent_calibration']
             },
             annotations: { title: 'Local Traffic-to-Customer Converter', readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+          },
+          {
+            name: 'audit_local_business_schema_live',
+            title: 'Live Local Business Schema Auditor',
+            description: 'Fetches any business website live and audits REAL local-SEO signals: LocalBusiness/Organization JSON-LD structured data field by field, NAP (name-address-phone) presence, tel: links, Google Maps embeds, and prioritized local ranking fixes.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                url: { type: 'string', description: 'Business website URL e.g. https://www.restaurant-example.com' }
+              },
+              required: ['url']
+            },
+            outputSchema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', description: 'success or error' },
+                schema_audit: { type: 'string', description: 'JSON-LD LocalBusiness structured data found and missing fields' },
+                nap_signals: { type: 'string', description: 'Name, address, phone signals detected in the real HTML' },
+                maps_and_contact_read: { type: 'string', description: 'Maps embeds, tel links and contact paths found' },
+                local_seo_priorities: { type: 'string', description: 'P1/P2/P3 local SEO fixes based on the real page' },
+                data_source: { type: 'string', description: 'How the page was fetched' }
+              },
+              required: ['status', 'schema_audit', 'nap_signals', 'maps_and_contact_read', 'local_seo_priorities', 'data_source']
+            },
+            annotations: {
+              readOnlyHint: true,
+              destructiveHint: false,
+              idempotentHint: false,
+              openWorldHint: true
+            }
           }
         ]
       }
@@ -329,6 +359,10 @@ async function handleMcpRequest(request, env) {
           break;
         case 'convert_local_traffic_to_customers':
           result = convertLocalTraffic(args);
+          break;
+        case 'audit_local_business_schema_live':
+          if (!args || typeof args.url !== 'string' || args.url.length === 0) { return { jsonrpc: '2.0', id, error: { code: -32602, message: 'Missing required parameter: url (string)' } }; }
+          result = await auditLocalBusinessSchemaLive(args);
           break;
         default:
           return {
@@ -509,5 +543,77 @@ function convertLocalTraffic(args) {
     local_ads_layer: focus === 'local_ads_profitably' ? focusContent.local_ads_profitably : 'LOCAL ADS (compressed): LSA first where eligible (pay-per-lead, Google Screened, fed by your review count), tight single-campaign search with call tracking, PMax only with real conversion data, and the budget-floor honesty (~$500-750/month minimum in competitive metros — below it, buy reviews-and-content effort instead). Full layer: run conversion_focus=local_ads_profitably.',
     measurement_spine: 'THE MEASUREMENT SPINE: (1) UTM-tag every GBP link (website, appointment, menu — source=google / medium=organic / campaign=gbp-listing) or profile traffic hides inside generic organic forever; (2) CALL TRACKING done NAP-safely: dynamic number insertion (DNI) on the WEBSITE is safe; the GBP primary number should remain the canonical business line (a tracking number as primary can propagate into citations and seed NAP chaos — if used, the real number goes in as additional and the canonical discipline tightens); (3) THE NATIVE METRICS read monthly with skepticism and trend-focus: profile interactions (calls, direction requests, website clicks, bookings) — directionally useful, occasionally restated by Google; (4) THE REAL KPIs in order: booked jobs/appointments by source, leads by source with response time, calls answered vs missed, THEN rankings (the GeoGrid) — rankings are the leading indicator, revenue is the verdict; (5) THE ATTRIBUTION HONESTY for the owner: last-click undercounts local SEO structurally (the customer who saw the pack, read reviews Tuesday and called from the profile Friday attributes wherever the last tap landed) — judge the program on the trend of booked work and the weekly scorecard, not on any single dashboard\u2019s theology.',
     intent_calibration: intentCalibration[intent] + (focus === 'full_conversion_system' ? ' FULL SYSTEM: ' + focusContent.full_conversion_system : '')
+  };
+}
+
+async function auditLocalBusinessSchemaLive(args) {
+  var url = args.url;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  var html = '';
+  var status = 0;
+  var fetchOk = false;
+  try {
+    var resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LocalForge-MCP/1.1)', 'Accept': 'text/html' }, redirect: 'follow' });
+    status = resp.status;
+    html = await resp.text();
+    fetchOk = true;
+  } catch (e) { fetchOk = false; }
+  if (!fetchOk || !html) {
+    return {
+      status: 'success',
+      schema_audit: 'FETCH FAILED for ' + url + ' - host unreachable or blocking automated requests. No structured data could be read on this attempt.',
+      nap_signals: 'UNAVAILABLE - no HTML received.',
+      maps_and_contact_read: 'UNAVAILABLE - no HTML received.',
+      local_seo_priorities: 'P1: verify the site is up and publicly reachable | P2: re-run this audit once it resolves | P3: meanwhile ensure the Google Business Profile is claimed - it outranks the website for most local queries anyway.',
+      data_source: 'Attempted live GET of ' + url + ' at request time. Real fetch - nothing simulated.'
+    };
+  }
+  var blocks = [];
+  var re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  var m;
+  while ((m = re.exec(html)) !== null && blocks.length < 10) {
+    try {
+      var parsed = JSON.parse(m[1].trim());
+      var arr = Array.isArray(parsed) ? parsed : (parsed['@graph'] && Array.isArray(parsed['@graph'])) ? parsed['@graph'] : [parsed];
+      for (var i = 0; i < arr.length; i++) blocks.push(arr[i]);
+    } catch (e) {}
+  }
+  var localTypes = ['LocalBusiness', 'Restaurant', 'Store', 'Dentist', 'Attorney', 'Plumber', 'Electrician', 'HairSalon', 'AutoRepair', 'MedicalBusiness', 'ProfessionalService', 'Organization', 'Hotel', 'CafeOrCoffeeShop', 'BarOrPub', 'RealEstateAgent'];
+  var biz = null, bizType = null;
+  for (var b = 0; b < blocks.length; b++) {
+    var ty = blocks[b]['@type'];
+    var tys = Array.isArray(ty) ? ty : [ty];
+    for (var t2 = 0; t2 < tys.length; t2++) {
+      if (localTypes.indexOf(String(tys[t2])) !== -1) { biz = blocks[b]; bizType = String(tys[t2]); break; }
+    }
+    if (biz) break;
+  }
+  var checks = [];
+  var missing = [];
+  if (biz) {
+    [['name', 'business name'], ['address', 'postal address'], ['telephone', 'phone'], ['geo', 'geo coordinates'], ['openingHours', 'opening hours'], ['openingHoursSpecification', 'opening hours spec'], ['priceRange', 'price range'], ['aggregateRating', 'aggregate rating'], ['url', 'canonical URL'], ['image', 'image']].forEach(function(pair) {
+      if (biz[pair[0]] !== undefined) checks.push(pair[1]); else missing.push(pair[1]);
+    });
+    var hoursOk = checks.indexOf('opening hours') !== -1 || checks.indexOf('opening hours spec') !== -1;
+    missing = missing.filter(function(x) { return !(hoursOk && (x === 'opening hours' || x === 'opening hours spec')); });
+  }
+  var telLinks = (html.match(/href=["']tel:/gi) || []).length;
+  var mapEmbeds = (html.match(/google\.com\/maps|maps\.googleapis|maps\.app\.goo/gi) || []).length;
+  var addressTag = /<address[\s>]/i.test(html);
+  var phonePattern = (html.replace(/<[^>]+>/g, ' ').match(/(\+?\d[\d\s().-]{8,}\d)/g) || []).length;
+  var prios = [];
+  if (!biz) prios.push('P1: NO LocalBusiness JSON-LD found - this is the single highest-leverage local SEO fix; add a LocalBusiness block with name, address, telephone, geo and openingHoursSpecification');
+  else if (missing.length) prios.push('P1: complete the existing ' + bizType + ' schema - missing: ' + missing.join(', '));
+  if (telLinks === 0) prios.push('P1: no tel: links - mobile visitors cannot tap-to-call, and tap-to-call is the #1 local conversion action');
+  if (mapEmbeds === 0) prios.push('P2: no Google Maps embed detected - an embedded map reinforces the address entity signal and helps users');
+  if (!addressTag) prios.push('P2: no <address> element - wrap the NAP in semantic markup');
+  prios.push('P3: keep NAP byte-identical across the website, Google Business Profile and every directory - inconsistency is the classic local ranking killer');
+  return {
+    status: 'success',
+    schema_audit: blocks.length === 0 ? 'NO JSON-LD structured data found on ' + url + ' (HTTP ' + status + ') - search engines must guess what this business is. That guess costs rankings.' : (biz ? 'FOUND ' + bizType + ' JSON-LD (of ' + blocks.length + ' schema node(s) on the page). Present fields: ' + checks.join(', ') + '.' + (missing.length ? ' MISSING: ' + missing.join(', ') + '.' : ' All key fields present - excellent.') : blocks.length + ' JSON-LD node(s) found but NONE is a LocalBusiness-family type (' + blocks.slice(0, 4).map(function(x) { return String(x['@type']); }).join(', ') + ') - local pack ranking needs an explicit local type.'),
+    nap_signals: 'NAP SIGNALS in the real HTML: ' + phonePattern + ' phone-like pattern(s) in visible text, semantic <address> element: ' + (addressTag ? 'present' : 'ABSENT') + ', business schema name: ' + (biz && biz.name ? '"' + String(biz.name).slice(0, 60) + '"' : 'not in schema') + '.',
+    maps_and_contact_read: 'CONTACT PATHS: ' + telLinks + ' tap-to-call tel: link(s), ' + mapEmbeds + ' Google Maps reference(s)/embed(s), mailto links: ' + ((html.match(/href=["']mailto:/gi) || []).length) + '.',
+    local_seo_priorities: prios.join(' | '),
+    data_source: 'Live GET of ' + url + ' at request time with real JSON-LD parsing and HTML signal extraction. Every finding read from the actual page - nothing assumed.'
   };
 }
