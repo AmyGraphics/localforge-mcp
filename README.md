@@ -102,3 +102,10 @@ MIT — build freely.
 ## Evidence
 
 Live audits include source URL, collection timestamp and confidence notes so observed business data is separated from general recommendations.
+
+
+## Why this MCP is worth using
+
+Observed local visibility evidence → prioritized Google Business Profile, reputation and local SEO actions.
+
+This outcome is the product value; the tool count is only an implementation detail.
