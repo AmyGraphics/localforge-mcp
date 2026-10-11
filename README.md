@@ -97,3 +97,8 @@ LocalForge is part of a 52-server autonomous MCP suite — SEO, databases, secur
 ## 📄 License
 
 MIT — build freely.
+
+
+## Evidence
+
+Live audits include source URL, collection timestamp and confidence notes so observed business data is separated from general recommendations.
